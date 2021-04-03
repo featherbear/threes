@@ -1,0 +1,37 @@
+[[package]]
+name = "instagram-private-api"
+version = "1.6.0"
+description = "A client interface for the private Instagram API."
+category = "main"
+optional = false
+python-versions = "*"
+develop = false
+
+[package.source]
+type = "git"
+url = "https://git@github.com/ping/instagram_private_api.git"
+reference = "1.6.0"
+resolved_reference = "1d70e99bc11591161b0cd71cff3f0c08cd04b34f"
+
+[[package]]
+name = "python-dotenv"
+version = "0.17.0"
+description = "Read key-value pairs from a .env file and set them as environment variables"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+cli = ["click (>=5.0)"]
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.8"
+content-hash = "74567a3f19fefef73df8de7ca69401b41a2bc7b92394315c5c321051bc29da16"
+
+[metadata.files]
+instagram-private-api = []
+python-dotenv = [
+    {file = "python-dotenv-0.17.0.tar.gz", hash = "sha256:471b782da0af10da1a80341e8438fca5fadeba2881c54360d5fd8d03d03a4f4a"},
+    {file = "python_dotenv-0.17.0-py2.py3-none-any.whl", hash = "sha256:49782a97c9d641e8a09ae1d9af0856cc587c8d2474919342d5104d85be9890b2"},
+]
