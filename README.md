@@ -26,9 +26,9 @@ I'm using [`poetry`](https://python-poetry.org/) as the Python package manager, 
 
 #### Spacer IDs
 
-There are two types of ID that are required by the underlying Instagram API wrapper - the `short code`, and the `media id`.  
+There are two types of ID that are required by the underlying API wrapper - `short code`, and `media id`.  
 The **short code** is the tag that you see at the end of a post if you copy its share link - i.e. the `CNNVgtGn95F` in `https://www.instagram.com/p/CNNVgtGn95F/`.  
-The **media id** uh well I did some snooping to find it.
+The **media id** - uhhhh well I did some snooping to find it.
 
 ---
 
@@ -36,4 +36,5 @@ The **media id** uh well I did some snooping to find it.
 
 Copyright © 2021 Andrew Wong
 
-This software is licensed under the MIT License. You are free to redistribute it and/or modify it under the terms of the license.
+This software is licensed under the MIT License.  
+You are free to redistribute it and/or modify it under the terms of the license.

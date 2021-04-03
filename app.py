@@ -88,7 +88,7 @@ def calculateAction() -> List[Tuple[SpacerAction, MediaID]]:
     if posts % 3 == 0:
         return []
 
-    reqSpacers = 3 - (realPosts % 3)
+    reqSpacers = (3 - (realPosts % 3)) % 3
 
     if reqSpacers == len(visibleSpacers):
         return []
