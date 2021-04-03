@@ -1,6 +1,6 @@
 # Threes
 
-> Instagram 3x1 Content Spacer 
+> Instagram 3 x n Content Spacer 
 
 ---
 
