@@ -1,79 +1,172 @@
-import instagram_web_api  # Metrics
-import instagram_private_api  # Actions
+from typing import List, Tuple, Dict, NewType
+
+from lib.patched_instagram_web_api import PatchedClient as WebClient  # Metrics
+from instagram_private_api import Client as AppClient, MediaTypes  # Actions
 
 import os
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from typing import List, Tuple, NewType
-
 #region Types
 SpacerAction = NewType('SpacerAction', str)
-SpacerID = NewType('SpacerID', str)
+MediaID = NewType('MediaID', str)
 #endregion
 
+def rateUsage(*, weight: int):
+    if not hasattr(rateUsage, 'weightCount'):
+        rateUsage.weightCount = 0
 
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            rateUsage.weightCount += weight
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@rateUsage(weight=1)
 def getFeedCount() -> int:
     """Gets the number of items in the authenticated user's feed
+
+    # GET https://graph.instagram.com/{user-id}/?fields=media_count&access_token={access-token}
 
     Returns:
         int: Feed count
     """
-    # GET https://graph.instagram.com/{user-id}/?fields=media_count&access_token={access-token}
 
-    return 0
+    global web_api
 
-def getSpacers() -> List[SpacerID]:
-    """Gets the visible spacers
+    username = os.getenv('IG_USERNAME')
+    # if authenticated ------ web_api.timeline_feed()['data']['user']['username']
+    return web_api.user_info2(username)['counts']['media']
+
+
+def getSpacers() -> Dict[MediaID, bool]:
+    """Gets the visibility of the spacers
+
+    # GET https://graph.instagram.com/{media-id}?fields=caption&access_token={access-token}
 
     Returns:
         List[str]: IDs of the visible spacers
     """
-    # GET https://graph.instagram.com/{media-id}?fields=caption&access_token={access-token}
-    return []
 
-def calculateAction() -> List[Tuple[SpacerAction, SpacerID]]:
-    posts = getFeedCount()
-    postOffset = posts % 3
+    global web_api
 
+    result = dict()
+
+    @rateUsage(weight=1)
+    def getMediaInfo(shortCode):
+        return web_api.media_info2(shortCode)
+
+    for shortCode, mediaID in map(lambda s: s.strip().split(":"), os.getenv("spacers").strip().split(",")):
+        try:
+            getMediaInfo(shortCode)
+            result[mediaID] = True  # result[r['id']] = True
+        except:
+            result[mediaID] = False
+
+    return result
+
+
+def calculateAction() -> List[Tuple[SpacerAction, MediaID]]:
     spacers = getSpacers()
-    spacerCount = len(spacers)
- 
-    if postOffset == 0:
+
+    def getSpacersByVisibility(visibility: bool):
+        return dict(filter(lambda o: o[1] == visibility, spacers.items()))
+
+    visibleSpacers = getSpacersByVisibility(True)
+    invisibleSpacers = getSpacersByVisibility(False)
+
+    posts = getFeedCount()
+    realPosts = posts - len(visibleSpacers)
+
+    print(
+        f"Currently has {realPosts} posts, and {len(visibleSpacers)} visible spacers")
+
+    posts = getFeedCount()
+    if posts % 3 == 0:
         return []
 
-    if spacerCount > 0:
-        return [('hide', spacers[i]) for i in range(min(postOffset, spacerCount))]
-    else: # postOffset > 0 and spacerCount == 0
-        return [('show', spacers[i]) for i in range(3 - postOffset)]
+    reqSpacers = 3 - (realPosts % 3)
 
-def __main__():
-    for (action, spacerID) in calculateAction():
+    if reqSpacers == len(visibleSpacers):
+        return []
+
+    if reqSpacers > len(visibleSpacers):
+        return [('show', [*invisibleSpacers.keys()][i]) for i in range(reqSpacers - len(visibleSpacers))]
+    else:
+        return [('hide', [*visibleSpacers.keys()][i]) for i in range(len(visibleSpacers) - reqSpacers)]
+
+
+if __name__ == "__main__":
+
+    commonSettings = dict(
+        drop_incompat_keys=False,
+        auto_patch=True,
+    )
+    import pickle
+
+    #region Web API
+    web_api_session = None
+    try:
+        with open(".webAPI.session", "rb") as f:
+            web_api_session = pickle.load(f)
+        print("Found existing web api session")
+    except:
+        pass
+
+    web_api = None
+
+    if web_api_session is not None:
+        web_api = WebClient(
+            **commonSettings, cookie=web_api_session["cookie"], settings=web_api_session)
+        print("Using existing web api session")
+    else:
+        web_api = WebClient(**commonSettings, authenticate=True,
+                            username=os.getenv('IG_USERNAME'), password=os.getenv('IG_PASSWORD'))
+        # The onLoad parameter from Client only is called after a login, not a session resumption
+        with open(".webAPI.session", "wb") as f:
+            pickle.dump(web_api.settings, f)
+        print("Successfully authenticated to the web api")
+
+    #endregion
+
+    actions = calculateAction()
+    if len(actions) == 0:
+        exit()
+
+    #region App API
+
+    app_api_session = None
+    try:
+        with open(".appAPI.session", "rb") as f:
+            app_api_session = pickle.load(f)
+        print("Found existing app api session")
+
+    except:
+        pass
+
+    app_api = None
+
+    if app_api_session is not None:
+        app_api = AppClient(os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'), **commonSettings, cookie=app_api_session["cookie"], settings=app_api_session)
+        print("Using existing app api session")
+
+    else:
+        app_api = AppClient(os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'), **commonSettings)
+        with open(".appAPI.session", "wb") as f:
+            pickle.dump(app_api.settings, f)
+        print("Successfully authenticated to the app api")
+    #endregion
+
+    @rateUsage(weight=1)
+    def setArchived(mediaID, status):
+        return app_api.media_only_me(mediaID, MediaTypes.PHOTO, not status)
+
+    for (action, spacerID) in actions:
         print(action, spacerID)
-
-# web_api = Client(auto_patch=True, drop_incompat_keys=False)
-# user_feed_info = web_api.user_feed('329452045', count=10)
-# for post in user_feed_info:
-#     print('%s from %s' % (post['link'], post['user']['username']))
-# webClient = instagram_web_api.Client(
-#     auto_patch=True, authenticate=True,
-#     username=os.getenv('IG_USERNAME'), password=os.getenv('IG_PASSWORD'))
-# print(webClient, dir(webClient))
-# try:
-#     api = instagram_private_api.Client(
-#         os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'))
-# except instagram_private_api.errors.ClientLoginError as e:
-#     print("Bad username / password")
-#     exit()
-
-# print(api.authenticated_user_id)
-
-# results = api.self_feed()
-# print(results.keys())
-# items = results.get('items', [])
-# for item in items:
-#     # Manually patch the entity to match the public api as closely as possible, optional
-#     # To automatically patch entities, initialise the Client with auto_patch=True
-#     ClientCompatPatch.media(item)
-#     print(media['code'])
+        setArchived(spacerID, action == 'hide')
+        
+    if hasattr(rateUsage, 'weightCount'):
+        print("API Call Usage:", rateUsage.weightCount)
