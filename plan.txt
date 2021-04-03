@@ -1,9 +1,0 @@
-Interval: On image posted webhook
-
-Settings:
-- Spacer ID
-
-Actions:
-* Check post count
-    * GET https://graph.instagram.com/{user-id}/?fields=media_count&access_token={access-token}
-* GET https://graph.instagram.com/{media-id}?fields=caption&access_token={access-token}
