@@ -59,7 +59,7 @@ def getSpacers() -> Dict[MediaID, bool]:
     def getMediaInfo(shortCode):
         return web_api.media_info2(shortCode)
 
-    for shortCode, mediaID in map(lambda s: s.strip().split(":"), os.getenv("spacers").strip().split(",")):
+    for shortCode, mediaID in map(lambda s: s.strip().split(":"), os.getenv("SPACERS").strip().split(",")):
         try:
             getMediaInfo(shortCode)
             result[mediaID] = True  # result[r['id']] = True
