@@ -4,7 +4,7 @@
 
 ---
 
-![](https://featherbear.cc/blog/uploads/sxs.gif)
+![](https://featherbear.cc/blog/uploads/5.jpg)
 
 ## Rationale
 
