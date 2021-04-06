@@ -4,6 +4,8 @@
 
 ---
 
+![](https://featherbear.cc/blog/uploads/sxs.gif)
+
 ## Rationale
 
 So I used to post images as `3 x n` (length x height) tiles on [Instagram](https://www.instagram.com/_andrewjwong/) but I've decided that it's too much effort to do for all my photos - and it probably had stunted my creative willingness.
