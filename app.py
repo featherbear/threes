@@ -57,7 +57,13 @@ def getSpacers() -> Dict[MediaID, bool]:
 
     @rateUsage(weight=1)
     def getMediaInfo(shortCode):
-        return web_api.media_info2(shortCode)
+        obj = app_api.media_info(mediaID)
+        if obj["items"][0].get("visibility", None) == "only_me":
+            raise Exception("Hidden")
+        return obj
+
+        # No longer works
+        # return web_api.media_info2(shortCode)
 
     for shortCode, mediaID in map(lambda s: s.strip().split(":"), os.getenv("SPACERS").strip().split(",")):
         try:
@@ -119,10 +125,14 @@ if __name__ == "__main__":
     web_api = None
 
     if web_api_session is not None:
-        web_api = WebClient(
-            **commonSettings, cookie=web_api_session["cookie"], settings=web_api_session)
-        print("Using existing web api session")
-    else:
+        try:
+            web_api = WebClient(
+                **commonSettings, cookie=web_api_session["cookie"], settings=web_api_session)
+            print("Using existing web api session")
+        except:
+            print("Web API session likely expired, renewing")
+
+    if web_api is None:
         web_api = WebClient(**commonSettings, authenticate=True,
                             username=os.getenv('IG_USERNAME'), password=os.getenv('IG_PASSWORD'))
         # The onLoad parameter from Client only is called after a login, not a session resumption
@@ -131,10 +141,6 @@ if __name__ == "__main__":
         print("Successfully authenticated to the web api")
 
     #endregion
-
-    actions = calculateAction()
-    if len(actions) == 0:
-        exit()
 
     #region App API
 
@@ -150,15 +156,22 @@ if __name__ == "__main__":
     app_api = None
 
     if app_api_session is not None:
-        app_api = AppClient(os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'), **commonSettings, cookie=app_api_session["cookie"], settings=app_api_session)
-        print("Using existing app api session")
+        try:
+            app_api = AppClient(os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'), **commonSettings, cookie=app_api_session["cookie"], settings=app_api_session)
+            print("Using existing app api session")
+        except:
+            print("App API session likely expired, renewing")
 
-    else:
+    if app_api is None:
         app_api = AppClient(os.getenv('IG_USERNAME'), os.getenv('IG_PASSWORD'), **commonSettings)
         with open(".appAPI.session", "wb") as f:
             pickle.dump(app_api.settings, f)
         print("Successfully authenticated to the app api")
     #endregion
+
+    actions = calculateAction()
+    if len(actions) == 0:
+        exit()
 
     @rateUsage(weight=1)
     def setArchived(mediaID, status):
